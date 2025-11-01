@@ -74,10 +74,25 @@ export default function App() {
                   <option value="EUR">EUR (€)</option>
                 </select>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button className="btn btn-secondary" onClick={() => { localStorage.clear(); location.reload() }}>Reset All Data</button>
-                <button className="btn btn-secondary" onClick={syncPricesNow}>Sync INR prices now</button>
-                <button className="btn btn-secondary" onClick={() => setAutoPrices((v) => !v)}>Auto refresh 60s: {autoPrices ? 'On' : 'Off'}</button>
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button className="btn btn-secondary" onClick={syncPricesNow}>Sync INR prices now</button>
+                  <button className="btn btn-secondary" onClick={() => setAutoPrices((v) => !v)}>Auto refresh 60s: {autoPrices ? 'On' : 'Off'}</button>
+                </div>
+                <div className="border-t border-gray-200 pt-3 dark:border-gray-800">
+                  <div className="mb-2 text-xs text-gray-500 dark:text-gray-400">Data Status: {transactions.length} transactions, {Object.keys(prices).length} price entries</div>
+                  <button className="btn btn-secondary" onClick={() => {
+                    console.log('Transactions:', transactions)
+                    console.log('Prices:', prices)
+                    alert(`Data check:\nTransactions: ${transactions.length}\nPrices: ${Object.keys(prices).length}\n\nCheck browser console (F12) for details.`)
+                  }}>Check Data in Console</button>
+                  <button className="btn btn-secondary" onClick={() => {
+                    if (confirm('This will delete ALL your data. Are you sure?')) {
+                      localStorage.clear()
+                      location.reload()
+                    }
+                  }}>Reset All Data</button>
+                </div>
               </div>
             </div>
           )}

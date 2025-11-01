@@ -5,18 +5,29 @@ export function useLocalStorage(key, defaultValue) {
     try {
       const item = window.localStorage.getItem(key)
       if (item === null) {
+        // Only set default if nothing exists in localStorage
         return defaultValue
       }
       const parsed = JSON.parse(item)
-      return parsed
+      // If parsed value exists and is valid, use it; otherwise use default
+      return parsed !== null && parsed !== undefined ? parsed : defaultValue
     } catch (error) {
       console.error(`Error reading localStorage key "${key}":`, error)
+      // If there's existing data that can't be parsed, keep it in localStorage but use default
       return defaultValue
     }
   })
 
-  // Save to localStorage whenever storedValue changes
+  // Track if this is the first render to avoid overwriting existing data
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  // Save to localStorage whenever storedValue changes (but not on first render)
   useEffect(() => {
+    if (!isInitialized) {
+      setIsInitialized(true)
+      return // Skip saving on first render to avoid overwriting
+    }
+    
     try {
       // Only save if value is different from default or if it's truthy
       if (storedValue !== undefined && storedValue !== null) {
@@ -32,7 +43,7 @@ export function useLocalStorage(key, defaultValue) {
         alert('Storage quota exceeded. Please clear some browser data.')
       }
     }
-  }, [key, storedValue])
+  }, [key, storedValue, isInitialized])
 
   // Custom setter that ensures localStorage is updated immediately
   const setValue = useCallback((value) => {
