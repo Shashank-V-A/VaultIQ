@@ -44,44 +44,89 @@ export default function TransactionTable({ transactions, setTransactions, curren
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="table min-w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-200 text-left dark:border-gray-800">
-              <th className="px-2 py-2">Date</th>
-              <th className="px-2 py-2">Type</th>
-              <th className="px-2 py-2">Symbol</th>
-              <th className="num px-2 py-2">Quantity</th>
-              <th className="num px-2 py-2">Price (incl. fees) ({currency})</th>
-              <th className="num px-2 py-2">Platform</th>
-              <th className="num px-2 py-2">GST</th>
-              <th className="num px-2 py-2">TDS</th>
-              <th className="px-2 py-2 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedDesc.map((t) => (
-              <tr key={t.id} className="border-b border-gray-100 dark:border-gray-800">
-                <td className="px-2 py-2">{t.date}</td>
-                <td className="px-2 py-2">{t.type === 'BUY' ? <span className="chip-buy">BUY</span> : <span className="chip-sell">SELL</span>}</td>
-                <td className="px-2 py-2"><CoinBadge symbol={t.symbol} /></td>
-                <td className="num px-2 py-2">{t.quantity}</td>
-                <td className="num px-2 py-2">{t.price}</td>
-                <td className="num px-2 py-2">{t.feeExchange || 0}</td>
-                <td className="num px-2 py-2">{t.feeGst || 0}</td>
-                <td className="num px-2 py-2">{t.type === 'SELL' ? (t.tds || 0) : '-'}</td>
-                <td className="px-2 py-2 text-right">
-                  <button className="btn btn-secondary" onClick={() => remove(t.id)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-            {sortedDesc.length === 0 && (
-              <tr>
-                <td className="px-2 py-6 text-center text-gray-500" colSpan={8}>No transactions</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      {/* Separate BUY and SELL Transactions */}
+      <div className="space-y-6">
+        {/* BUY Transactions Section */}
+        <div>
+          <h3 className="mb-3 text-lg font-semibold text-green-600 dark:text-green-400">BUY Transactions</h3>
+          <div className="overflow-x-auto">
+            <table className="table min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 text-left dark:border-gray-800">
+                  <th className="px-2 py-2">Date</th>
+                  <th className="px-2 py-2">Symbol</th>
+                  <th className="num px-2 py-2">Quantity</th>
+                  <th className="num px-2 py-2">Price (incl. fees) ({currency})</th>
+                  <th className="num px-2 py-2">Platform</th>
+                  <th className="num px-2 py-2">GST</th>
+                  <th className="px-2 py-2 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedDesc.filter(t => t.type === 'BUY').map((t) => (
+                  <tr key={t.id} className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="px-2 py-2">{t.date}</td>
+                    <td className="px-2 py-2"><CoinBadge symbol={t.symbol} /></td>
+                    <td className="num px-2 py-2">{t.quantity}</td>
+                    <td className="num px-2 py-2">{t.price}</td>
+                    <td className="num px-2 py-2">{t.feeExchange || 0}</td>
+                    <td className="num px-2 py-2">{t.feeGst || 0}</td>
+                    <td className="px-2 py-2 text-right">
+                      <button className="btn btn-secondary" onClick={() => remove(t.id)}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
+                {sortedDesc.filter(t => t.type === 'BUY').length === 0 && (
+                  <tr>
+                    <td className="px-2 py-6 text-center text-gray-500" colSpan={7}>No BUY transactions</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* SELL Transactions Section */}
+        <div>
+          <h3 className="mb-3 text-lg font-semibold text-red-600 dark:text-red-400">SELL Transactions</h3>
+          <div className="overflow-x-auto">
+            <table className="table min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 text-left dark:border-gray-800">
+                  <th className="px-2 py-2">Date</th>
+                  <th className="px-2 py-2">Symbol</th>
+                  <th className="num px-2 py-2">Quantity</th>
+                  <th className="num px-2 py-2">Price (incl. fees) ({currency})</th>
+                  <th className="num px-2 py-2">Platform</th>
+                  <th className="num px-2 py-2">GST</th>
+                  <th className="num px-2 py-2">TDS</th>
+                  <th className="px-2 py-2 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedDesc.filter(t => t.type === 'SELL').map((t) => (
+                  <tr key={t.id} className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="px-2 py-2">{t.date}</td>
+                    <td className="px-2 py-2"><CoinBadge symbol={t.symbol} /></td>
+                    <td className="num px-2 py-2">{t.quantity}</td>
+                    <td className="num px-2 py-2">{t.price}</td>
+                    <td className="num px-2 py-2">{t.feeExchange || 0}</td>
+                    <td className="num px-2 py-2">{t.feeGst || 0}</td>
+                    <td className="num px-2 py-2">{t.tds || 0}</td>
+                    <td className="px-2 py-2 text-right">
+                      <button className="btn btn-secondary" onClick={() => remove(t.id)}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
+                {sortedDesc.filter(t => t.type === 'SELL').length === 0 && (
+                  <tr>
+                    <td className="px-2 py-6 text-center text-gray-500" colSpan={8}>No SELL transactions</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   )
