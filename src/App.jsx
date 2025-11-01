@@ -8,15 +8,20 @@ import Dashboard from './components/Dashboard.jsx'
 import PriceManager from './components/PriceManager.jsx'
 import HoldingsTable from './components/HoldingsTable.jsx'
 import { useLocalStorage } from './hooks/useLocalStorage.js'
+import { useCloudStorage } from './hooks/useCloudStorage.js'
 import { computePerSymbolStats, computePortfolioTotals } from './utils/calcProfit.js'
 import { fetchInrPricesPreferCoinDCX } from './utils/prices.js'
 import { useInterval } from './hooks/useInterval.js'
+import { isSupabaseConfigured } from './utils/supabase.js'
 
 export default function App() {
   const [activeTab, setActiveTab] = useLocalStorage('ui.activeTab', 'dashboard')
   const [currency, setCurrency] = useLocalStorage('settings.currency', 'INR')
-  const [transactions, setTransactions] = useLocalStorage('data.transactions', [])
-  const [prices, setPrices] = useLocalStorage('data.prices', {})
+  
+  // Use cloud storage for transactions and prices (persists across devices/browsers)
+  const [transactions, setTransactions, transactionsMeta] = useCloudStorage('data.transactions', [])
+  const [prices, setPrices, pricesMeta] = useCloudStorage('data.prices', {})
+  
   const [autoPrices, setAutoPrices] = useLocalStorage('settings.autoPrices', true)
 
   const perSymbol = useMemo(() => computePerSymbolStats(transactions, prices), [transactions, prices])
@@ -79,19 +84,55 @@ export default function App() {
                   <button className="btn btn-secondary" onClick={syncPricesNow}>Sync INR prices now</button>
                   <button className="btn btn-secondary" onClick={() => setAutoPrices((v) => !v)}>Auto refresh 60s: {autoPrices ? 'On' : 'Off'}</button>
                 </div>
-                <div className="border-t border-gray-200 pt-3 dark:border-gray-800">
-                  <div className="mb-2 text-xs text-gray-500 dark:text-gray-400">Data Status: {transactions.length} transactions, {Object.keys(prices).length} price entries</div>
-                  <button className="btn btn-secondary" onClick={() => {
-                    console.log('Transactions:', transactions)
-                    console.log('Prices:', prices)
-                    alert(`Data check:\nTransactions: ${transactions.length}\nPrices: ${Object.keys(prices).length}\n\nCheck browser console (F12) for details.`)
-                  }}>Check Data in Console</button>
-                  <button className="btn btn-secondary" onClick={() => {
-                    if (confirm('This will delete ALL your data. Are you sure?')) {
-                      localStorage.clear()
-                      location.reload()
-                    }
-                  }}>Reset All Data</button>
+                <div className="border-t border-gray-200 pt-3 dark:border-gray-800 space-y-3">
+                  <div className="text-sm font-medium">Cloud Storage</div>
+                  {isSupabaseConfigured() ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                        <span>✓</span>
+                        <span>Cloud storage enabled - your data is saved to the cloud</span>
+                      </div>
+                      {(transactionsMeta.isSyncing || pricesMeta.isSyncing) && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Syncing to cloud...</div>
+                      )}
+                      {transactionsMeta.lastSyncError && (
+                        <div className="text-xs text-red-600 dark:text-red-400">Sync error: {transactionsMeta.lastSyncError}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2 text-sm">
+                      <div className="text-yellow-600 dark:text-yellow-400">
+                        ⚠ Cloud storage not configured - data is stored locally only
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        To enable cloud storage (data persists across browsers/devices):
+                        <ol className="list-decimal list-inside mt-1 space-y-1">
+                          <li>Create a free account at <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">supabase.com</a></li>
+                          <li>Create a new project</li>
+                          <li>Create a table named 'user_data' with columns: user_id (text, primary key), transactions (jsonb), prices (jsonb), updated_at (timestamp)</li>
+                          <li>Get your project URL and anon key from Settings → API</li>
+                          <li>Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your Vercel environment variables</li>
+                        </ol>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="border-t border-gray-200 pt-3 dark:border-gray-800">
+                    <div className="mb-2 text-xs text-gray-500 dark:text-gray-400">Data Status: {transactions.length} transactions, {Object.keys(prices).length} price entries</div>
+                    <div className="flex flex-wrap gap-2">
+                      <button className="btn btn-secondary" onClick={() => {
+                        console.log('Transactions:', transactions)
+                        console.log('Prices:', prices)
+                        alert(`Data check:\nTransactions: ${transactions.length}\nPrices: ${Object.keys(prices).length}\n\nCheck browser console (F12) for details.`)
+                      }}>Check Data in Console</button>
+                      <button className="btn btn-secondary" onClick={() => {
+                        if (confirm('This will delete ALL your data. Are you sure?')) {
+                          localStorage.clear()
+                          location.reload()
+                        }
+                      }}>Reset All Data</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

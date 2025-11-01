@@ -9,19 +9,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.78.0",
+    "clsx": "^2.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "recharts": "^2.12.7",
-    "clsx": "^2.1.1"
+    "recharts": "^2.12.7"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.1",
     "@types/react": "^18.3.4",
     "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
     "vite": "^5.4.8"
   }
 }
-
