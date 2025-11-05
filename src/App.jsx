@@ -12,7 +12,7 @@ import { useCloudStorage } from './hooks/useCloudStorage.js'
 import { computePerSymbolStats, computePortfolioTotals } from './utils/calcProfit.js'
 import { fetchInrPricesPreferCoinDCX } from './utils/prices.js'
 import { useInterval } from './hooks/useInterval.js'
-import { isSupabaseConfigured } from './utils/supabase.js'
+import { isApiConfigured } from './utils/postgres-api.js'
 
 export default function App() {
   const [activeTab, setActiveTab] = useLocalStorage('ui.activeTab', 'dashboard')
@@ -85,15 +85,15 @@ export default function App() {
                   <button className="btn btn-secondary" onClick={() => setAutoPrices((v) => !v)}>Auto refresh 60s: {autoPrices ? 'On' : 'Off'}</button>
                 </div>
                 <div className="border-t border-gray-200 pt-3 dark:border-gray-800 space-y-3">
-                  <div className="text-sm font-medium">Cloud Storage</div>
-                  {isSupabaseConfigured() ? (
+                  <div className="text-sm font-medium">PostgreSQL Storage</div>
+                  {isApiConfigured() ? (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
                         <span>✓</span>
-                        <span>Cloud storage enabled - your data is saved to the cloud</span>
+                        <span>PostgreSQL storage enabled - your data is saved to the database</span>
                       </div>
                       {(transactionsMeta.isSyncing || pricesMeta.isSyncing) && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Syncing to cloud...</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Syncing to database...</div>
                       )}
                       {transactionsMeta.lastSyncError && (
                         <div className="text-xs text-red-600 dark:text-red-400">Sync error: {transactionsMeta.lastSyncError}</div>
@@ -102,16 +102,15 @@ export default function App() {
                   ) : (
                     <div className="space-y-2 text-sm">
                       <div className="text-yellow-600 dark:text-yellow-400">
-                        ⚠ Cloud storage not configured - data is stored locally only
+                        ⚠ PostgreSQL API not configured - data is stored locally only
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        To enable cloud storage (data persists across browsers/devices):
+                        To enable PostgreSQL storage (data persists across browsers/devices):
                         <ol className="list-decimal list-inside mt-1 space-y-1">
-                          <li>Create a free account at <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">supabase.com</a></li>
-                          <li>Create a new project</li>
-                          <li>Create a table named 'user_data' with columns: user_id (text, primary key), transactions (jsonb), prices (jsonb), updated_at (timestamp)</li>
-                          <li>Get your project URL and anon key from Settings → API</li>
-                          <li>Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your Vercel environment variables</li>
+                          <li>Set up a PostgreSQL database (local or cloud like AWS RDS, Railway, Render, etc.)</li>
+                          <li>Deploy the API server (see <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">server/</code> folder)</li>
+                          <li>Set <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">VITE_API_URL</code> environment variable in Vercel</li>
+                          <li>See <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">POSTGRES_SETUP.md</code> for detailed instructions</li>
                         </ol>
                       </div>
                     </div>

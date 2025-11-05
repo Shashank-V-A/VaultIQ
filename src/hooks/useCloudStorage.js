@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { isSupabaseConfigured, saveTransactions, savePrices, loadTransactions, loadPrices } from '../utils/supabase.js'
+import { isApiConfigured, saveTransactions, savePrices, loadTransactions, loadPrices } from '../utils/postgres-api.js'
 
 // Hybrid storage hook: Cloud-first with localStorage fallback/cache
 export function useCloudStorage(key, defaultValue) {
@@ -23,10 +23,10 @@ export function useCloudStorage(key, defaultValue) {
 
   // Load from cloud on mount (only once)
   useEffect(() => {
-    if (!isSupabaseConfigured() || hasLoadedFromCloud.current) {
+    if (!isApiConfigured() || hasLoadedFromCloud.current) {
       setIsLoading(false)
-      if (!isSupabaseConfigured()) {
-        setLastSyncError('Cloud storage not configured - using localStorage only')
+      if (!isApiConfigured()) {
+        setLastSyncError('API not configured - using localStorage only')
       }
       return
     }
@@ -71,7 +71,7 @@ export function useCloudStorage(key, defaultValue) {
       window.localStorage.setItem(key, JSON.stringify(valueToStore))
       
       // Sync to cloud in background (non-blocking)
-      if (isSupabaseConfigured()) {
+      if (isApiConfigured()) {
         setIsSyncing(true)
         setLastSyncError(null)
         
@@ -96,6 +96,6 @@ export function useCloudStorage(key, defaultValue) {
     }
   }, [key, storedValue])
 
-  return [storedValue, setValue, { isLoading, isSyncing, lastSyncError, isCloudEnabled: isSupabaseConfigured() }]
+  return [storedValue, setValue, { isLoading, isSyncing, lastSyncError, isCloudEnabled: isApiConfigured() }]
 }
 
