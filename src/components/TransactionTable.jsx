@@ -91,22 +91,22 @@ export default function TransactionTable({ transactions, setTransactions, curren
 
   return (
     <div className="card space-y-3">
-      <div className="flex flex-wrap items-end gap-3">
-        <div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 items-end">
+        <div className="min-w-0">
           <label className="label">Symbol</label>
-          <input className="input" placeholder="BTC" value={symbol} onChange={(e) => setSymbol(e.target.value)} />
+          <input className="input w-full" placeholder="BTC" value={symbol} onChange={(e) => setSymbol(e.target.value)} />
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="label">From</label>
-          <input type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <input type="date" className="input w-full" value={from} onChange={(e) => setFrom(e.target.value)} />
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="label">To</label>
-          <input type="date" className="input" value={to} onChange={(e) => setTo(e.target.value)} />
+          <input type="date" className="input w-full" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
-        <div className="ml-auto flex gap-2">
-          <button className="btn btn-secondary" onClick={() => { setSymbol(''); setFrom(''); setTo('') }}>Reset</button>
-          <button className="btn btn-primary" onClick={exportCsv}>Export CSV</button>
+        <div className="flex gap-2 sm:justify-end col-span-1 sm:col-span-2 lg:col-span-1">
+          <button className="btn btn-secondary w-full sm:w-auto" onClick={() => { setSymbol(''); setFrom(''); setTo('') }}>Reset</button>
+          <button className="btn btn-primary w-full sm:w-auto" onClick={exportCsv}>Export CSV</button>
         </div>
       </div>
 
@@ -116,7 +116,7 @@ export default function TransactionTable({ transactions, setTransactions, curren
         <div>
           <h3 className="mb-3 text-lg font-semibold text-green-600 dark:text-green-400">BUY Transactions</h3>
           <div className="overflow-x-auto">
-            <table className="table min-w-full text-sm">
+            <table className="table min-w-[1000px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left dark:border-gray-800">
                   <th className="px-2 py-2">
@@ -184,7 +184,7 @@ export default function TransactionTable({ transactions, setTransactions, curren
         <div>
           <h3 className="mb-3 text-lg font-semibold text-red-600 dark:text-red-400">SELL Transactions</h3>
           <div className="overflow-x-auto">
-            <table className="table min-w-full text-sm">
+            <table className="table min-w-[1060px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left dark:border-gray-800">
                   <th className="px-2 py-2">
