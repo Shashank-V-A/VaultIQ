@@ -12,6 +12,34 @@ export function calculateIncomeTax(profit) {
 }
 
 /**
+ * Calculate Health and Education Cess (4% of income tax)
+ * @param {number} incomeTax - Income tax amount
+ * @returns {number} - Cess amount (4% of tax)
+ */
+export function calculateCess(incomeTax) {
+  if (incomeTax <= 0) return 0
+  return incomeTax * 0.04 // 4% cess on income tax
+}
+
+/**
+ * Calculate total tax liability including cess
+ * @param {number} profit - Net profit from crypto transactions
+ * @returns {Object} - { tax: income tax, cess: cess amount, total: total tax payable }
+ */
+export function calculateTotalTax(profit) {
+  if (profit <= 0) {
+    return { tax: 0, cess: 0, total: 0 }
+  }
+  const tax = calculateIncomeTax(profit)
+  const cess = calculateCess(tax)
+  return {
+    tax,
+    cess,
+    total: tax + cess
+  }
+}
+
+/**
  * Calculate TDS (Tax Deducted at Source) - 1% on transfer value
  * Applicable when transfer value > ₹50,000
  * @param {number} transferValue - Value of the crypto transfer/sale
@@ -76,12 +104,16 @@ export function calculateTaxLiability(transactions, perSymbol, financialYear = n
 
   // Calculate taxes
   const incomeTax = calculateIncomeTax(totalRealizedProfit)
-  const netTaxAfterTDS = Math.max(0, incomeTax - totalTDS)
+  const cess = calculateCess(incomeTax)
+  const totalTaxWithCess = incomeTax + cess
+  const netTaxAfterTDS = Math.max(0, totalTaxWithCess - totalTDS)
 
   return {
     financialYear,
     totalRealizedProfit,
     incomeTax30Percent: incomeTax,
+    cess4Percent: cess,
+    totalTaxWithCess: totalTaxWithCess,
     tdsDeducted: totalTDS,
     netTaxLiability: netTaxAfterTDS,
     gstOnFees: totalGST,

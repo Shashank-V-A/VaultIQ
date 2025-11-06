@@ -17,9 +17,9 @@ export default function TaxReports({ transactions, perSymbol, currency }) {
       <div className="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
         <div className="mb-2 text-sm font-semibold text-blue-800 dark:text-blue-200">Important Tax Information</div>
         <ul className="text-xs text-gray-700 dark:text-gray-300 space-y-1 list-disc list-inside">
-          <li>As per Union Budget 2022, all crypto gains are taxed at flat 30% rate</li>
+          <li>As per Union Budget 2022, all crypto gains are taxed at flat 30% rate + 4% Health & Education Cess</li>
           <li>1% TDS is applicable on transfers above ₹50,000</li>
-          <li>TDS can be adjusted against final tax liability</li>
+          <li>TDS can be adjusted against final tax liability (including cess)</li>
           <li>GST on trading fees is separate and not deductible from income tax</li>
         </ul>
       </div>
@@ -33,6 +33,8 @@ export default function TaxReports({ transactions, perSymbol, currency }) {
                 <th className="px-2 py-2">Financial Year</th>
                 <th className="num px-2 py-2">Realized Profit</th>
                 <th className="num px-2 py-2">Tax @ 30%</th>
+                <th className="num px-2 py-2">Cess @ 4%</th>
+                <th className="num px-2 py-2">Total Tax</th>
                 <th className="num px-2 py-2">TDS Deducted</th>
                 <th className="num px-2 py-2">Net Tax Payable</th>
                 <th className="num px-2 py-2">GST on Fees</th>
@@ -45,6 +47,12 @@ export default function TaxReports({ transactions, perSymbol, currency }) {
                   <td className="num px-2 py-2">{formatCurrency(summary.totalRealizedProfit, currency)}</td>
                   <td className="num px-2 py-2 text-red-600 dark:text-red-400">
                     {formatCurrency(summary.incomeTax30Percent, currency)}
+                  </td>
+                  <td className="num px-2 py-2 text-red-600 dark:text-red-400">
+                    {formatCurrency(summary.cess4Percent || 0, currency)}
+                  </td>
+                  <td className="num px-2 py-2 text-red-600 dark:text-red-400 font-semibold">
+                    {formatCurrency(summary.totalTaxWithCess || (summary.incomeTax30Percent + (summary.incomeTax30Percent * 0.04)), currency)}
                   </td>
                   <td className="num px-2 py-2 text-yellow-600 dark:text-yellow-400">
                     {formatCurrency(summary.tdsDeducted, currency)}
@@ -66,6 +74,18 @@ export default function TaxReports({ transactions, perSymbol, currency }) {
                 <td className="num px-2 py-2 text-red-600 dark:text-red-400">
                   {formatCurrency(
                     taxSummaries.reduce((sum, s) => sum + s.incomeTax30Percent, 0),
+                    currency
+                  )}
+                </td>
+                <td className="num px-2 py-2 text-red-600 dark:text-red-400">
+                  {formatCurrency(
+                    taxSummaries.reduce((sum, s) => sum + (s.cess4Percent || 0), 0),
+                    currency
+                  )}
+                </td>
+                <td className="num px-2 py-2 text-red-600 dark:text-red-400">
+                  {formatCurrency(
+                    taxSummaries.reduce((sum, s) => sum + (s.totalTaxWithCess || (s.incomeTax30Percent + (s.incomeTax30Percent * 0.04))), 0),
                     currency
                   )}
                 </td>
@@ -99,7 +119,7 @@ export default function TaxReports({ transactions, perSymbol, currency }) {
           <ul className="space-y-1 list-disc list-inside">
             <li>Report crypto gains under "Income from Other Sources" or "Capital Gains"</li>
             <li>Taxable income: Realized Profit (after deducting cost basis)</li>
-            <li>Tax rate: 30% flat (no deductions/exemptions)</li>
+            <li>Tax rate: 30% flat + 4% Health & Education Cess (no deductions/exemptions)</li>
             <li>Include TDS deducted in Form 26AS</li>
             <li>GST on fees is separate and not included in income tax calculation</li>
           </ul>
