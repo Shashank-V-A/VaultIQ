@@ -2,6 +2,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
   const items = [
     { key: 'dashboard', label: 'Portfolio' },
     { key: 'transactions', label: 'Transactions' },
+    { key: 'tax', label: 'Tax Reports' },
     { key: 'settings', label: 'Settings' },
   ]
   return (

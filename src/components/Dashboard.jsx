@@ -1,6 +1,7 @@
 import { formatCurrency } from '../utils/format.js'
 import PortfolioHeader from './PortfolioHeader.jsx'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
+import { calculateIncomeTax } from '../utils/taxCalculator.js'
 
 const COLORS = ['#10b981', '#f59e0b', '#8b5cf6', '#14b8a6', '#ef4444']
 
@@ -16,6 +17,36 @@ export default function Dashboard({ perSymbol, totals, currency }) {
         <StatCard title="Realized P/L" value={formatCurrency(totals.totalRealized, currency)} positive={totals.totalRealized >= 0} />
         <StatCard title="Unrealized P/L" value={formatCurrency(totals.totalUnrealized, currency)} positive={totals.totalUnrealized >= 0} />
       </div>
+
+      {/* Tax Liability Section (Indian Tax Laws) */}
+      {totals.totalRealized > 0 && (
+        <div className="card bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+          <div className="mb-3 text-sm font-semibold text-yellow-800 dark:text-yellow-200">Indian Tax Liability</div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">Realized Profit</div>
+              <div className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
+                {formatCurrency(totals.totalRealized, currency)}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">Tax @ 30% (as per Indian law)</div>
+              <div className="text-lg font-semibold text-red-600 dark:text-red-400">
+                {formatCurrency(calculateIncomeTax(totals.totalRealized), currency)}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">Net Profit After Tax</div>
+              <div className="text-lg font-semibold">
+                {formatCurrency(totals.totalRealized - calculateIncomeTax(totals.totalRealized), currency)}
+              </div>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+            * As per Union Budget 2022, crypto gains are taxed at 30% flat rate. TDS may be deducted separately.
+          </p>
+        </div>
+      )}
 
       <div className="card">
         <div className="mb-3 text-sm font-medium">Portfolio Distribution</div>

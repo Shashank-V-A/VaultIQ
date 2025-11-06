@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from './Toast.jsx'
+import { calculateTDS } from '../utils/taxCalculator.js'
 
 const emptyForm = {
   date: '',
@@ -20,7 +21,29 @@ export default function TransactionForm({ onAdd, currency }) {
   }
 
   function update(field, value) {
-    setForm((f) => ({ ...f, [field]: value }))
+    setForm((f) => {
+      const updated = { ...f, [field]: value }
+      // Auto-calculate TDS for SELL transactions > ₹50,000
+      if (updated.type === 'SELL') {
+        if (field === 'price' && updated.price) {
+          const priceNum = Number(updated.price)
+          const tdsAmount = calculateTDS(priceNum)
+          if (tdsAmount > 0 && !updated.tds) {
+            // Only auto-populate if field is empty
+            updated.tds = tdsAmount.toFixed(2)
+          }
+        } else if (field === 'type' && updated.price) {
+          const priceNum = Number(updated.price)
+          const tdsAmount = calculateTDS(priceNum)
+          if (tdsAmount > 0) {
+            updated.tds = tdsAmount.toFixed(2)
+          }
+        }
+      } else if (field === 'type' && value === 'BUY') {
+        updated.tds = ''
+      }
+      return updated
+    })
   }
 
   function reset() {
@@ -90,8 +113,20 @@ export default function TransactionForm({ onAdd, currency }) {
           </div>
           {form.type === 'SELL' && (
             <div>
-              <label className="label">TDS (1%) ({currency})</label>
-              <input type="number" step="0.00000001" inputMode="decimal" className="input" onKeyDown={blockInvalid} value={form.tds} onChange={(e) => update('tds', e.target.value)} />
+              <label className="label">TDS (1% if &gt; ₹50,000) ({currency})</label>
+              <input 
+                type="number" 
+                step="0.00000001" 
+                inputMode="decimal" 
+                className="input" 
+                onKeyDown={blockInvalid} 
+                value={form.tds} 
+                onChange={(e) => update('tds', e.target.value)}
+                placeholder={form.price ? calculateTDS(Number(form.price)).toFixed(2) : '0.00'}
+              />
+              {form.price && Number(form.price) > 50000 && !form.tds && (
+                <p className="mt-1 text-xs text-gray-500">Auto-calculated: ₹{calculateTDS(Number(form.price)).toFixed(2)}</p>
+              )}
             </div>
           )}
         </div>

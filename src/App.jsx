@@ -7,6 +7,7 @@ import TransactionTable from './components/TransactionTable.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import PriceManager from './components/PriceManager.jsx'
 import HoldingsTable from './components/HoldingsTable.jsx'
+import TaxReports from './components/TaxReports.jsx'
 import { useLocalStorage } from './hooks/useLocalStorage.js'
 import { useCloudStorage } from './hooks/useCloudStorage.js'
 import { computePerSymbolStats, computePortfolioTotals } from './utils/calcProfit.js'
@@ -66,6 +67,10 @@ export default function App() {
               <TransactionForm onAdd={(tx) => setTransactions((t) => [...t, tx])} currency={currency} />
               <TransactionTable transactions={transactions} setTransactions={setTransactions} currency={currency} />
             </div>
+          )}
+
+          {activeTab === 'tax' && (
+            <TaxReports transactions={transactions} perSymbol={perSymbol} currency={currency} />
           )}
 
           {activeTab === 'settings' && (

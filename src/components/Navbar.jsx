@@ -4,6 +4,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
   const tabs = [
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'transactions', label: 'Transactions' },
+    { key: 'tax', label: 'Tax Reports' },
     { key: 'settings', label: 'Settings' },
   ]
   return (
