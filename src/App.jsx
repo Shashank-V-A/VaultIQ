@@ -123,19 +123,12 @@ export default function App() {
                   
                   <div className="border-t border-gray-200 pt-3 dark:border-gray-800">
                     <div className="mb-2 text-xs text-gray-500 dark:text-gray-400">Data Status: {transactions.length} transactions, {Object.keys(prices).length} price entries</div>
-                    <div className="flex flex-wrap gap-2">
-                      <button className="btn btn-secondary" onClick={() => {
-                        console.log('Transactions:', transactions)
-                        console.log('Prices:', prices)
-                        alert(`Data check:\nTransactions: ${transactions.length}\nPrices: ${Object.keys(prices).length}\n\nCheck browser console (F12) for details.`)
-                      }}>Check Data in Console</button>
-                      <button className="btn btn-secondary" onClick={() => {
-                        if (confirm('This will delete ALL your data. Are you sure?')) {
-                          localStorage.clear()
-                          location.reload()
-                        }
-                      }}>Reset All Data</button>
-                    </div>
+                    <button className="btn btn-secondary" onClick={() => {
+                      if (confirm('This will delete ALL your data. Are you sure?')) {
+                        localStorage.clear()
+                        location.reload()
+                      }
+                    }}>Reset All Data</button>
                   </div>
                 </div>
               </div>
