@@ -11,6 +11,7 @@ const emptyForm = {
   feeExchange: '',
   feeGst: '',
   tds: '',
+  notes: '',
 }
 
 export default function TransactionForm({ onAdd, currency }) {
@@ -52,7 +53,7 @@ export default function TransactionForm({ onAdd, currency }) {
 
   function handleSubmit(e) {
     e.preventDefault()
-    const { date, symbol, type, quantity, price, feeExchange, feeGst, tds } = form
+    const { date, symbol, type, quantity, price, feeExchange, feeGst, tds, notes } = form
     if (!date || !symbol || !quantity || !price) {
       toast('Please fill date, symbol, quantity, and price', 'error')
       return
@@ -67,6 +68,7 @@ export default function TransactionForm({ onAdd, currency }) {
       feeExchange: feeExchange ? Number(feeExchange) : 0,
       feeGst: feeGst ? Number(feeGst) : 0,
       tds: tds ? Number(tds) : 0,
+      notes: notes?.trim() || '',
     }
     onAdd(tx)
     toast('Transaction added')
@@ -129,6 +131,10 @@ export default function TransactionForm({ onAdd, currency }) {
               )}
             </div>
           )}
+        </div>
+        <div className="mt-3">
+          <label className="label">Notes / Remarks</label>
+          <textarea className="input min-h-[80px]" value={form.notes} onChange={(e) => update('notes', e.target.value)} placeholder="Optional notes (exchange reference, order id, reason, etc.)" />
         </div>
         <p className="mt-2 text-xs text-gray-500">Note: Total Price should already include all fees/taxes. It's used directly for cost/proceeds.</p>
       </div>
