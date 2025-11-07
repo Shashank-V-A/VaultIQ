@@ -105,7 +105,7 @@ export default function App() {
         <main className="flex-1">
           {activeTab === 'dashboard' && (
             <div className="space-y-4">
-              <Dashboard perSymbol={perSymbol} totals={totals} currency={currency} />
+              <Dashboard perSymbol={perSymbol} totals={totals} currency={currency} transactions={transactions} />
               <HoldingsTable perSymbol={perSymbol} currency={currency} />
               <PriceManager
                 prices={prices}
@@ -131,38 +131,40 @@ export default function App() {
           )}
 
           {activeTab === 'settings' && (
-            <div className="card space-y-3">
-              <div className="text-sm font-medium">Settings</div>
-              <div>
-                <label className="label">Currency</label>
-                <select className="input max-w-xs" value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                  <option value="INR">INR (₹)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button className="btn btn-secondary" onClick={syncPricesNow}>Sync INR prices now</button>
-                  <button className="btn btn-secondary" onClick={() => setAutoPrices((v) => !v)}>Auto refresh 60s: {autoPrices ? 'On' : 'Off'}</button>
+            <div className="space-y-4">
+              <div className="card space-y-3">
+                <div className="text-sm font-medium">Settings</div>
+                <div>
+                  <label className="label">Currency</label>
+                  <select className="input max-w-xs" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                    <option value="INR">INR (₹)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                  </select>
                 </div>
-                <div className="border-t border-gray-200 pt-3 dark:border-gray-800">
-                  <div className="mb-2 text-xs text-gray-500 dark:text-gray-400">Data Status: {transactions.length} transactions, {Object.keys(prices).length} price entries</div>
-                    <div className="flex flex-wrap gap-2">
-                      <button className="btn btn-secondary" onClick={exportAllData}>Export Backup (JSON)</button>
-                      <label className="btn btn-secondary cursor-pointer">
-                        Import Backup
-                        <input type="file" accept="application/json" className="hidden" onChange={(e) => importBackup(e.target.files?.[0])} />
-                      </label>
-                      <button className="btn btn-secondary" onClick={createSnapshot}>Create Snapshot</button>
-                      <button className="btn btn-secondary" onClick={() => {
-                        if (confirm('This will delete ALL your data. Are you sure?')) {
-                          localStorage.clear()
-                          location.reload()
-                        }
-                      }}>Reset All Data</button>
-                    </div>
-                    <HistoryList />
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button className="btn btn-secondary" onClick={syncPricesNow}>Sync INR prices now</button>
+                    <button className="btn btn-secondary" onClick={() => setAutoPrices((v) => !v)}>Auto refresh 60s: {autoPrices ? 'On' : 'Off'}</button>
+                  </div>
+                  <div className="border-t border-gray-200 pt-3 dark:border-gray-800">
+                    <div className="mb-2 text-xs text-gray-500 dark:text-gray-400">Data Status: {transactions.length} transactions, {Object.keys(prices).length} price entries</div>
+                      <div className="flex flex-wrap gap-2">
+                        <button className="btn btn-secondary" onClick={exportAllData}>Export Backup (JSON)</button>
+                        <label className="btn btn-secondary cursor-pointer">
+                          Import Backup
+                          <input type="file" accept="application/json" className="hidden" onChange={(e) => importBackup(e.target.files?.[0])} />
+                        </label>
+                        <button className="btn btn-secondary" onClick={createSnapshot}>Create Snapshot</button>
+                        <button className="btn btn-secondary" onClick={() => {
+                          if (confirm('This will delete ALL your data. Are you sure?')) {
+                            localStorage.clear()
+                            location.reload()
+                          }
+                        }}>Reset All Data</button>
+                      </div>
+                      <HistoryList />
+                  </div>
                 </div>
               </div>
             </div>

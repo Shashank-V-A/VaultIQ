@@ -78,28 +78,75 @@ export function calculateTaxLiability(transactions, perSymbol, financialYear = n
     return tDate >= fyStart && tDate <= fyEnd
   })
 
-  // Calculate total realized profit
+  // Calculate total realized profit for this financial year only
+  // We need to match SELL transactions in this FY against BUY transactions (from any year) using FIFO
   let totalRealizedProfit = 0
   let totalTDS = 0
   let totalGST = 0
 
-  for (const symbol of Object.keys(perSymbol)) {
-    const stats = perSymbol[symbol]
-    // Only count realized profits (from SELL transactions)
-    const symbolSells = fyTransactions.filter(t => 
-      t.symbol.toUpperCase() === symbol && t.type === 'SELL'
-    )
-    
-    if (symbolSells.length > 0) {
-      // Get profit for this symbol from realized amount
-      totalRealizedProfit += stats.realized || 0
-      
-      // Sum TDS from SELL transactions
-      symbolSells.forEach(t => {
-        totalTDS += t.tds || 0
-        totalGST += t.feeGst || 0
-      })
+  // Get all transactions up to the end of this financial year (for FIFO matching)
+  // This ensures BUY transactions from previous years are included for cost basis calculation
+  const allTransactionsUpToFYEnd = transactions.filter(t => {
+    const tDate = new Date(t.date)
+    return tDate <= fyEnd
+  })
+
+  // Group all transactions by symbol for FIFO calculation
+  const symbolGroups = {}
+  allTransactionsUpToFYEnd.forEach(t => {
+    const key = t.symbol.toUpperCase()
+    if (!symbolGroups[key]) symbolGroups[key] = []
+    symbolGroups[key].push(t)
+  })
+
+  // Calculate realized profit per symbol for SELL transactions in this FY
+  for (const symbol of Object.keys(symbolGroups)) {
+    // Get all transactions for this symbol up to FY end, sorted by date
+    const symbolTxs = symbolGroups[symbol].sort((a, b) => new Date(a.date) - new Date(b.date))
+    const lots = [] // FIFO lots: { qtyRemaining, costPerUnit }
+    let symbolRealizedProfit = 0
+
+    // Process all transactions chronologically to build FIFO lots
+    for (const t of symbolTxs) {
+      const qty = Number(t.quantity)
+      const totalAmount = Number(t.price)
+      const tDate = new Date(t.date)
+
+      if (t.type === 'BUY') {
+        // Add to FIFO lots
+        const unitCost = totalAmount / qty
+        lots.push({ qtyRemaining: qty, costPerUnit: unitCost })
+      } else if (t.type === 'SELL') {
+        // Calculate profit using FIFO matching
+        let qtyToSell = qty
+        let proceeds = totalAmount
+        let costBasis = 0
+
+        // Match against FIFO lots
+        while (qtyToSell > 0 && lots.length > 0) {
+          const lot = lots[0]
+          const used = Math.min(lot.qtyRemaining, qtyToSell)
+          costBasis += used * lot.costPerUnit
+          lot.qtyRemaining -= used
+          qtyToSell -= used
+          if (lot.qtyRemaining <= 0.00000001) {
+            lots.shift()
+          }
+        }
+
+        // Only count profit from SELL transactions in this financial year
+        if (tDate >= fyStart && tDate <= fyEnd) {
+          const profit = proceeds - costBasis
+          symbolRealizedProfit += profit
+
+          // Sum TDS and GST from SELL transactions in this FY
+          totalTDS += t.tds || 0
+          totalGST += t.feeGst || 0
+        }
+      }
     }
+
+    totalRealizedProfit += symbolRealizedProfit
   }
 
   // Calculate taxes

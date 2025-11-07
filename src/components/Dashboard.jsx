@@ -2,10 +2,11 @@ import { formatCurrency } from '../utils/format.js'
 import PortfolioHeader from './PortfolioHeader.jsx'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import { calculateTotalTax } from '../utils/taxCalculator.js'
+import FeesAndTDSReport from './FeesAndTDSReport.jsx'
 
 const COLORS = ['#10b981', '#f59e0b', '#8b5cf6', '#14b8a6', '#ef4444']
 
-export default function Dashboard({ perSymbol, totals, currency }) {
+export default function Dashboard({ perSymbol, totals, currency, transactions }) {
   const data = Object.entries(perSymbol).map(([symbol, v]) => ({ name: symbol, value: v.currentValue }))
 
   return (
@@ -64,6 +65,9 @@ export default function Dashboard({ perSymbol, totals, currency }) {
           </div>
         )
       })()}
+
+      {/* Fees & TDS Report */}
+      <FeesAndTDSReport transactions={transactions || []} currency={currency} />
 
       <div className="card">
         <div className="mb-3 text-sm font-medium">Portfolio Distribution</div>

@@ -3,6 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import pg from 'pg'
 import dotenv from 'dotenv'
+import crypto from 'crypto'
 
 dotenv.config()
 
@@ -38,6 +39,23 @@ async function initDatabase() {
 }
 
 initDatabase()
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    message: 'VaultIQ API Server',
+    endpoints: {
+      health: '/health',
+      data: {
+        get: 'GET /api/data/:userId',
+        save: 'POST /api/data/:userId',
+        transactions: 'POST /api/transactions/:userId',
+        prices: 'POST /api/prices/:userId'
+      }
+    }
+  })
+})
 
 // Health check
 app.get('/health', (req, res) => {
@@ -136,6 +154,7 @@ app.post('/api/prices/:userId', async (req, res) => {
     res.status(500).json({ error: 'Failed to save prices' })
   }
 })
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)

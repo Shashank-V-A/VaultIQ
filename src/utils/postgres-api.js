@@ -3,10 +3,14 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 // Check if API is configured
 export function isApiConfigured() {
-  // Check if API_URL is set and not the default localhost
-  // Or if we're in production (not localhost)
-  return (API_URL && API_URL !== 'http://localhost:3001') || 
-         (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+  // Always allow localhost:3001 for local development
+  // In production, check if VITE_API_URL is explicitly set
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    // Local development - allow if API URL is set (even if localhost)
+    return API_URL && API_URL !== ''
+  }
+  // Production - must have explicit API URL set
+  return API_URL && API_URL !== '' && API_URL !== 'http://localhost:3001'
 }
 
 // Generate a unique user ID (for demo purposes, using browser fingerprint)
@@ -33,13 +37,13 @@ export async function saveTransactions(transactions) {
     })
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.statusText}`)
+      throw new Error(`API error: ${response.status} ${response.statusText}`)
     }
 
     return true
   } catch (error) {
     console.error('Error saving transactions:', error)
-    throw error
+    return false
   }
 }
 
@@ -59,7 +63,7 @@ export async function loadTransactions() {
     const data = await response.json()
     return data.transactions || null
   } catch (error) {
-    console.error('Error loading transactions:', error)
+    console.warn('Postgres API unavailable for transactions, continuing with local data only.', error)
     return null
   }
 }
@@ -77,13 +81,13 @@ export async function savePrices(prices) {
     })
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.statusText}`)
+      throw new Error(`API error: ${response.status} ${response.statusText}`)
     }
 
     return true
   } catch (error) {
     console.error('Error saving prices:', error)
-    throw error
+    return false
   }
 }
 
@@ -103,7 +107,7 @@ export async function loadPrices() {
     const data = await response.json()
     return data.prices || null
   } catch (error) {
-    console.error('Error loading prices:', error)
+    console.warn('Postgres API unavailable for prices, continuing with local data only.', error)
     return null
   }
 }
@@ -123,7 +127,7 @@ export async function loadAllData() {
 
     return await response.json()
   } catch (error) {
-    console.error('Error loading all data:', error)
+    console.warn('Postgres API unavailable for combined data load.', error)
     return null
   }
 }
