@@ -138,8 +138,6 @@ export default function App() {
                   <label className="label">Currency</label>
                   <select className="input max-w-xs" value={currency} onChange={(e) => setCurrency(e.target.value)}>
                     <option value="INR">INR (₹)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
                   </select>
                 </div>
                 <div className="space-y-2">
