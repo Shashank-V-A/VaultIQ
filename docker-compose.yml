@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: vaultiq-pg
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: vaultiq
+    ports:
+      - "5432:5432"
+    volumes:
+      - vaultiq_pg:/var/lib/postgresql/data
+
+volumes:
+  vaultiq_pg:

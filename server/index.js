@@ -1,162 +1,69 @@
-// Simple Express API server for PostgreSQL storage
 import express from 'express'
 import cors from 'cors'
-import pg from 'pg'
+import cookieParser from 'cookie-parser'
 import dotenv from 'dotenv'
-import crypto from 'crypto'
+import { initDatabase } from './db.js'
+import authRoutes from './routes/auth.js'
+import transactionRoutes from './routes/transactions.js'
+import priceRoutes from './routes/prices.js'
+import settingsRoutes from './routes/settings.js'
+import coindcxRoutes from './routes/coindcx.js'
 
 dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 3001
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'
 
-// Middleware
-app.use(cors())
-app.use(express.json())
+app.use(cors({
+  origin: FRONTEND_URL,
+  credentials: true,
+}))
+app.use(express.json({ limit: '2mb' }))
+app.use(cookieParser())
 
-// PostgreSQL connection pool
-const { Pool } = pg
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-})
-
-// Create table if it doesn't exist
-async function initDatabase() {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS user_data (
-        user_id TEXT PRIMARY KEY,
-        transactions JSONB DEFAULT '[]'::jsonb,
-        prices JSONB DEFAULT '{}'::jsonb,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
-    `)
-    console.log('Database table ready')
-  } catch (error) {
-    console.error('Database initialization error:', error)
-  }
-}
-
-initDatabase()
-
-// Root endpoint
-app.get('/', (req, res) => {
-  res.json({ 
+app.get('/', (_req, res) => {
+  res.json({
     status: 'ok',
-    message: 'VaultIQ API Server',
-    endpoints: {
-      health: '/health',
-      data: {
-        get: 'GET /api/data/:userId',
-        save: 'POST /api/data/:userId',
-        transactions: 'POST /api/transactions/:userId',
-        prices: 'POST /api/prices/:userId'
-      }
-    }
+    name: 'VaultIQ API',
+    version: '2.0.0',
   })
 })
 
-// Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok' })
 })
 
-// Get user data
-app.get('/api/data/:userId', async (req, res) => {
+app.use('/api/auth', authRoutes)
+app.use('/api/transactions', transactionRoutes)
+app.use('/api/prices', priceRoutes)
+app.use('/api/settings', settingsRoutes)
+app.use('/api/coindcx', coindcxRoutes)
+
+app.use((err, _req, res, _next) => {
+  console.error(err)
+  res.status(500).json({ error: 'Internal server error' })
+})
+
+async function start() {
   try {
-    const { userId } = req.params
-    const result = await pool.query(
-      'SELECT transactions, prices FROM user_data WHERE user_id = $1',
-      [userId]
-    )
-    
-    if (result.rows.length === 0) {
-      return res.json({ transactions: [], prices: {} })
-    }
-    
-    res.json({
-      transactions: result.rows[0].transactions || [],
-      prices: result.rows[0].prices || {}
+    await initDatabase()
+    app.listen(PORT, () => {
+      console.log(`VaultIQ API running on http://localhost:${PORT}`)
+      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        console.warn('⚠️  Google OAuth credentials not set — add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET')
+      }
+      if (!process.env.JWT_SECRET) {
+        console.warn('⚠️  JWT_SECRET not set')
+      }
+      if (!process.env.ENCRYPTION_KEY) {
+        console.warn('⚠️  ENCRYPTION_KEY not set (required for CoinDCX key storage)')
+      }
     })
   } catch (error) {
-    console.error('Error fetching data:', error)
-    res.status(500).json({ error: 'Failed to fetch data' })
+    console.error('Failed to start server:', error)
+    process.exit(1)
   }
-})
+}
 
-// Save user data
-app.post('/api/data/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params
-    const { transactions, prices } = req.body
-    
-    await pool.query(
-      `INSERT INTO user_data (user_id, transactions, prices, updated_at)
-       VALUES ($1, $2, $3, NOW())
-       ON CONFLICT (user_id) 
-       DO UPDATE SET 
-         transactions = EXCLUDED.transactions,
-         prices = EXCLUDED.prices,
-         updated_at = NOW()`,
-      [userId, JSON.stringify(transactions || []), JSON.stringify(prices || {})]
-    )
-    
-    res.json({ success: true })
-  } catch (error) {
-    console.error('Error saving data:', error)
-    res.status(500).json({ error: 'Failed to save data' })
-  }
-})
-
-// Save transactions only
-app.post('/api/transactions/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params
-    const { transactions } = req.body
-    
-    await pool.query(
-      `INSERT INTO user_data (user_id, transactions, updated_at)
-       VALUES ($1, $2, NOW())
-       ON CONFLICT (user_id) 
-       DO UPDATE SET 
-         transactions = EXCLUDED.transactions,
-         updated_at = NOW()`,
-      [userId, JSON.stringify(transactions || [])]
-    )
-    
-    res.json({ success: true })
-  } catch (error) {
-    console.error('Error saving transactions:', error)
-    res.status(500).json({ error: 'Failed to save transactions' })
-  }
-})
-
-// Save prices only
-app.post('/api/prices/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params
-    const { prices } = req.body
-    
-    await pool.query(
-      `INSERT INTO user_data (user_id, prices, updated_at)
-       VALUES ($1, $2, NOW())
-       ON CONFLICT (user_id) 
-       DO UPDATE SET 
-         prices = EXCLUDED.prices,
-         updated_at = NOW()`,
-      [userId, JSON.stringify(prices || {})]
-    )
-    
-    res.json({ success: true })
-  } catch (error) {
-    console.error('Error saving prices:', error)
-    res.status(500).json({ error: 'Failed to save prices' })
-  }
-})
-
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-})
-
+start()

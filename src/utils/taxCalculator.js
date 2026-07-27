@@ -1,192 +1,209 @@
-// Indian Crypto Tax Calculator
-// Based on Union Budget 2022 provisions
+// Indian VDA tax engine
+// Income-tax Act provisions carried forward into the Income-tax Act, 2025:
+// - Flat 30% on income from transfer of VDAs (erstwhile §115BBH)
+// - Only cost of acquisition deductible; fees/expenses not deductible
+// - Losses cannot be set off against other VDA gains or any other income, and cannot be carried forward
+// - 1% TDS on specified transfers (erstwhile §194S), thresholds by person type
+// - Health & Education Cess 4% on (tax + surcharge)
+// Budget 2025/2026 retained the rate structure; compliance/reporting for exchanges was tightened.
 
-/**
- * Calculate 30% tax on crypto profits (as per Indian tax law)
- * @param {number} profit - Net profit from crypto transactions
- * @returns {number} - Tax amount (30% of profit)
- */
-export function calculateIncomeTax(profit) {
-  if (profit <= 0) return 0
-  return profit * 0.30 // 30% flat rate on all crypto gains
+function sortByDateAsc(transactions) {
+  return [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date))
 }
 
-/**
- * Calculate Health and Education Cess (4% of income tax)
- * @param {number} incomeTax - Income tax amount
- * @returns {number} - Cess amount (4% of tax)
- */
-export function calculateCess(incomeTax) {
-  if (incomeTax <= 0) return 0
-  return incomeTax * 0.04 // 4% cess on income tax
+function getFinancialYear(dateInput) {
+  const date = new Date(dateInput)
+  const year = date.getFullYear()
+  const month = date.getMonth() + 1
+  return month >= 4
+    ? `${year}-${String(year + 1).slice(-2)}`
+    : `${year - 1}-${String(year).slice(-2)}`
 }
 
-/**
- * Calculate total tax liability including cess
- * @param {number} profit - Net profit from crypto transactions
- * @returns {Object} - { tax: income tax, cess: cess amount, total: total tax payable }
- */
-export function calculateTotalTax(profit) {
-  if (profit <= 0) {
-    return { tax: 0, cess: 0, total: 0 }
+export function currentFinancialYear() {
+  return getFinancialYear(new Date())
+}
+
+export function fyDateRange(financialYear) {
+  const [startYearRaw, endYearRaw] = financialYear.split('-')
+  const startYear = Number(startYearRaw.length === 4 ? startYearRaw : `20${startYearRaw}`)
+  const endYear = Number(endYearRaw.length === 4 ? endYearRaw : `20${endYearRaw}`)
+  return {
+    fyStart: new Date(`${startYear}-04-01T00:00:00`),
+    fyEnd: new Date(`${endYear}-03-31T23:59:59.999`),
   }
-  const tax = calculateIncomeTax(profit)
-  const cess = calculateCess(tax)
+}
+
+/** 30% base tax on positive taxable VDA income only */
+export function calculateIncomeTax(taxableIncome) {
+  if (taxableIncome <= 0) return 0
+  return taxableIncome * 0.3
+}
+
+/** Surcharge on VDA tax — user-selected rate from settings (0 / 0.10 / 0.15 / 0.25 / 0.37) */
+export function calculateSurcharge(incomeTax, surchargeRate = 0) {
+  if (incomeTax <= 0 || surchargeRate <= 0) return 0
+  return incomeTax * Number(surchargeRate)
+}
+
+export function calculateCess(taxPlusSurcharge) {
+  if (taxPlusSurcharge <= 0) return 0
+  return taxPlusSurcharge * 0.04
+}
+
+export function calculateTotalTax(taxableIncome, surchargeRate = 0) {
+  if (taxableIncome <= 0) {
+    return { tax: 0, surcharge: 0, cess: 0, total: 0, taxableIncome: 0 }
+  }
+  const tax = calculateIncomeTax(taxableIncome)
+  const surcharge = calculateSurcharge(tax, surchargeRate)
+  const cess = calculateCess(tax + surcharge)
   return {
     tax,
+    surcharge,
     cess,
-    total: tax + cess
+    total: tax + surcharge + cess,
+    taxableIncome,
   }
 }
 
 /**
- * Calculate TDS (Tax Deducted at Source) - 1% on transfer value
- * Applicable when transfer value > ₹50,000
- * @param {number} transferValue - Value of the crypto transfer/sale
- * @returns {number} - TDS amount (1% if > ₹50,000, else 0)
+ * TDS under §194S — 1% when annual / transfer consideration exceeds threshold.
+ * specified persons (certain individuals/HUFs): ₹50,000
+ * others: ₹10,000
  */
-export function calculateTDS(transferValue) {
-  if (transferValue <= 50000) return 0
-  return transferValue * 0.01 // 1% TDS on transfers > ₹50,000
+export function getTdsThreshold(personType = 'specified') {
+  return personType === 'other' ? 10000 : 50000
+}
+
+export function calculateTDS(transferValue, personType = 'specified') {
+  const threshold = getTdsThreshold(personType)
+  if (transferValue <= threshold) return 0
+  return transferValue * 0.01
 }
 
 /**
- * Calculate tax liability for a financial year
- * @param {Array} transactions - All transactions
- * @param {Object} perSymbol - Per-symbol profit calculations
- * @param {string} financialYear - FY like '2023-24'
- * @returns {Object} - Tax summary
+ * FIFO walk producing per-SELL profit, respecting §115BBH:
+ * positive profits are taxable; losses are tracked but never set off.
  */
-export function calculateTaxLiability(transactions, perSymbol, financialYear = null) {
-  // Get financial year from current date if not provided
-  if (!financialYear) {
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = now.getMonth() + 1
-    // FY in India: April to March
-    const fy = month >= 4 ? `${year}-${String(year + 1).slice(-2)}` : `${year - 1}-${String(year).slice(-2)}`
-    financialYear = fy
+export function computeVdaTransferResults(transactions, { fyStart = null, fyEnd = null } = {}) {
+  const all = sortByDateAsc(transactions)
+  const upTo = fyEnd
+    ? all.filter((t) => new Date(t.date) <= fyEnd)
+    : all
+
+  const bySymbol = {}
+  for (const t of upTo) {
+    const key = String(t.symbol).toUpperCase()
+    if (!bySymbol[key]) bySymbol[key] = []
+    bySymbol[key].push(t)
   }
 
-  // Filter transactions by financial year (April to March)
-  const [startYear, endYear] = financialYear.split('-').map(y => parseInt(y))
-  const fyStart = new Date(`04-01-20${startYear}`)
-  const fyEnd = new Date(`03-31-20${endYear}`)
-  
-  const fyTransactions = transactions.filter(t => {
-    const tDate = new Date(t.date)
-    return tDate >= fyStart && tDate <= fyEnd
-  })
+  const sells = []
+  let taxableGains = 0
+  let disregardedLosses = 0
+  let netAccountingPnL = 0
 
-  // Calculate total realized profit for this financial year only
-  // We need to match SELL transactions in this FY against BUY transactions (from any year) using FIFO
-  let totalRealizedProfit = 0
-  let totalTDS = 0
-  let totalGST = 0
-
-  // Get all transactions up to the end of this financial year (for FIFO matching)
-  // This ensures BUY transactions from previous years are included for cost basis calculation
-  const allTransactionsUpToFYEnd = transactions.filter(t => {
-    const tDate = new Date(t.date)
-    return tDate <= fyEnd
-  })
-
-  // Group all transactions by symbol for FIFO calculation
-  const symbolGroups = {}
-  allTransactionsUpToFYEnd.forEach(t => {
-    const key = t.symbol.toUpperCase()
-    if (!symbolGroups[key]) symbolGroups[key] = []
-    symbolGroups[key].push(t)
-  })
-
-  // Calculate realized profit per symbol for SELL transactions in this FY
-  for (const symbol of Object.keys(symbolGroups)) {
-    // Get all transactions for this symbol up to FY end, sorted by date
-    const symbolTxs = symbolGroups[symbol].sort((a, b) => new Date(a.date) - new Date(b.date))
-    const lots = [] // FIFO lots: { qtyRemaining, costPerUnit }
-    let symbolRealizedProfit = 0
-
-    // Process all transactions chronologically to build FIFO lots
-    for (const t of symbolTxs) {
+  for (const symbol of Object.keys(bySymbol)) {
+    const lots = []
+    for (const t of bySymbol[symbol]) {
       const qty = Number(t.quantity)
       const totalAmount = Number(t.price)
       const tDate = new Date(t.date)
 
       if (t.type === 'BUY') {
-        // Add to FIFO lots
-        const unitCost = totalAmount / qty
-        lots.push({ qtyRemaining: qty, costPerUnit: unitCost })
-      } else if (t.type === 'SELL') {
-        // Calculate profit using FIFO matching
-        let qtyToSell = qty
-        let proceeds = totalAmount
-        let costBasis = 0
-
-        // Match against FIFO lots
-        while (qtyToSell > 0 && lots.length > 0) {
-          const lot = lots[0]
-          const used = Math.min(lot.qtyRemaining, qtyToSell)
-          costBasis += used * lot.costPerUnit
-          lot.qtyRemaining -= used
-          qtyToSell -= used
-          if (lot.qtyRemaining <= 0.00000001) {
-            lots.shift()
-          }
-        }
-
-        // Only count profit from SELL transactions in this financial year
-        if (tDate >= fyStart && tDate <= fyEnd) {
-          const profit = proceeds - costBasis
-          symbolRealizedProfit += profit
-
-          // Sum TDS and GST from SELL transactions in this FY
-          totalTDS += t.tds || 0
-          totalGST += t.feeGst || 0
-        }
+        lots.push({ qtyRemaining: qty, costPerUnit: totalAmount / qty })
+        continue
       }
-    }
 
-    totalRealizedProfit += symbolRealizedProfit
+      if (t.type !== 'SELL') continue
+
+      let qtyToSell = qty
+      let costBasis = 0
+      while (qtyToSell > 0 && lots.length > 0) {
+        const lot = lots[0]
+        const used = Math.min(lot.qtyRemaining, qtyToSell)
+        costBasis += used * lot.costPerUnit
+        lot.qtyRemaining -= used
+        qtyToSell -= used
+        if (lot.qtyRemaining <= 1e-12) lots.shift()
+      }
+
+      const proceeds = totalAmount
+      const profit = proceeds - costBasis
+      netAccountingPnL += profit
+
+      const inFy = (!fyStart || tDate >= fyStart) && (!fyEnd || tDate <= fyEnd)
+      if (!inFy) continue
+
+      const taxable = profit > 0 ? profit : 0
+      const loss = profit < 0 ? Math.abs(profit) : 0
+      taxableGains += taxable
+      disregardedLosses += loss
+
+      sells.push({
+        id: t.id,
+        date: t.date,
+        symbol,
+        proceeds,
+        costBasis,
+        profit,
+        taxableGain: taxable,
+        disregardedLoss: loss,
+        tds: Number(t.tds || 0),
+        feeGst: Number(t.feeGst || t.fee_gst || 0),
+        feeExchange: Number(t.feeExchange || t.fee_exchange || 0),
+      })
+    }
   }
 
-  // Calculate taxes
-  const incomeTax = calculateIncomeTax(totalRealizedProfit)
-  const cess = calculateCess(incomeTax)
-  const totalTaxWithCess = incomeTax + cess
-  const netTaxAfterTDS = Math.max(0, totalTaxWithCess - totalTDS)
+  return {
+    sells,
+    taxableGains,
+    disregardedLosses,
+    netAccountingPnL,
+  }
+}
+
+export function calculateTaxLiability(transactions, _perSymbol, financialYear = null, options = {}) {
+  const fy = financialYear || currentFinancialYear()
+  const { fyStart, fyEnd } = fyDateRange(fy)
+  const surchargeRate = Number(options.surchargeRate || 0)
+
+  const results = computeVdaTransferResults(transactions, { fyStart, fyEnd })
+  const totalTDS = results.sells.reduce((s, x) => s + x.tds, 0)
+  const totalGST = results.sells.reduce((s, x) => s + x.feeGst, 0)
+
+  const taxParts = calculateTotalTax(results.taxableGains, surchargeRate)
+  const netTaxAfterTDS = Math.max(0, taxParts.total - totalTDS)
 
   return {
-    financialYear,
-    totalRealizedProfit,
-    incomeTax30Percent: incomeTax,
-    cess4Percent: cess,
-    totalTaxWithCess: totalTaxWithCess,
+    financialYear: fy,
+    // Accounting net (informational — NOT the tax base under §115BBH)
+    accountingNetPnL: results.netAccountingPnL,
+    // Tax base: sum of positive gains only; losses disregarded
+    taxableGains: results.taxableGains,
+    disregardedLosses: results.disregardedLosses,
+    incomeTax30Percent: taxParts.tax,
+    surcharge: taxParts.surcharge,
+    surchargeRate,
+    cess4Percent: taxParts.cess,
+    totalTaxWithCess: taxParts.total,
     tdsDeducted: totalTDS,
     netTaxLiability: netTaxAfterTDS,
     gstOnFees: totalGST,
-    totalTaxPayable: netTaxAfterTDS + totalGST
+    totalTaxPayable: netTaxAfterTDS + totalGST,
+    sellCount: results.sells.length,
+    regimeNote:
+      'Under §115BBH / Income-tax Act 2025, VDA losses cannot be set off against other VDA gains or any other income, and cannot be carried forward. Only cost of acquisition is deductible.',
   }
 }
 
-/**
- * Get tax summary for all financial years
- */
-export function getTaxSummaryByFinancialYear(transactions, perSymbol) {
+export function getTaxSummaryByFinancialYear(transactions, perSymbol, options = {}) {
   const years = new Set()
-  
-  transactions.forEach(t => {
-    const date = new Date(t.date)
-    const year = date.getFullYear()
-    const month = date.getMonth() + 1
-    const fy = month >= 4 ? `${year}-${String(year + 1).slice(-2)}` : `${year - 1}-${String(year).slice(-2)}`
-    years.add(fy)
-  })
-
-  const summaries = []
-  years.forEach(fy => {
-    summaries.push(calculateTaxLiability(transactions, perSymbol, fy))
-  })
-
+  transactions.forEach((t) => years.add(getFinancialYear(t.date)))
+  const summaries = [...years].map((fy) =>
+    calculateTaxLiability(transactions, perSymbol, fy, options)
+  )
   return summaries.sort((a, b) => b.financialYear.localeCompare(a.financialYear))
 }
-

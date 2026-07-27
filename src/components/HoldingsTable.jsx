@@ -1,52 +1,49 @@
-import CoinBadge from './CoinBadge.jsx'
 import { formatCurrency, formatNumber } from '../utils/format.js'
+import CoinBadge from './CoinBadge.jsx'
 
 export default function HoldingsTable({ perSymbol, currency }) {
-  const entries = Object.entries(perSymbol)
-    .map(([symbol, v]) => ({ symbol, ...v }))
+  const rows = Object.entries(perSymbol)
+    .map(([symbol, s]) => ({ symbol, ...s }))
+    .filter((r) => r.holdingQty > 1e-12)
     .sort((a, b) => b.currentValue - a.currentValue)
 
   return (
-    <div className="card">
-      <div className="mb-3 text-sm font-medium">Holdings</div>
+    <div className="panel">
+      <div className="mb-4">
+        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-soft">Positions</div>
+        <h2 className="font-display text-xl font-semibold">Holdings</h2>
+      </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
+        <table className="table min-w-[720px] w-full">
           <thead>
-            <tr className="border-b border-neutral-200 text-left dark:border-neutral-800">
-              <th className="px-2 py-2">Asset</th>
-              <th className="px-2 py-2">Qty</th>
-              <th className="px-2 py-2">Avg Cost</th>
-              <th className="px-2 py-2">Price</th>
-              <th className="px-2 py-2">Value</th>
-              <th className="px-2 py-2">Unrealized P/L</th>
-              <th className="px-2 py-2">P/L %</th>
+            <tr>
+              <th>Asset</th>
+              <th className="num text-right">Qty</th>
+              <th className="num text-right">Avg cost</th>
+              <th className="num text-right">Price</th>
+              <th className="num text-right">Value</th>
+              <th className="num text-right">Unrealized</th>
             </tr>
           </thead>
           <tbody>
-            {entries.map((e) => {
-              const pl = e.unrealized
-              const pct = e.holdingCost > 0 ? (pl / e.holdingCost) * 100 : 0
-              return (
-                <tr key={e.symbol} className="border-b border-neutral-100 dark:border-neutral-800">
-                  <td className="px-2 py-2"><CoinBadge symbol={e.symbol} /></td>
-                  <td className="px-2 py-2">{formatNumber(e.holdingQty)}</td>
-                  <td className="px-2 py-2">{formatCurrency(e.avgBuyPrice, currency)}</td>
-                  <td className="px-2 py-2">{formatCurrency(e.currentPrice, currency)}</td>
-                  <td className="px-2 py-2">{formatCurrency(e.currentValue, currency)}</td>
-                  <td className={`px-2 py-2 ${pl >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatCurrency(pl, currency)}</td>
-                  <td className={`px-2 py-2 ${pct >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{pct.toFixed(2)}%</td>
-                </tr>
-              )
-            })}
-            {entries.length === 0 && (
-              <tr>
-                <td className="px-2 py-6 text-center text-neutral-500" colSpan={7}>No holdings. Add a BUY transaction.</td>
-              </tr>
+            {rows.length === 0 && (
+              <tr><td colSpan={6} className="py-8 text-center text-slate-soft">No open holdings</td></tr>
             )}
+            {rows.map((r) => (
+              <tr key={r.symbol}>
+                <td><CoinBadge symbol={r.symbol} /></td>
+                <td className="num text-right">{formatNumber(r.holdingQty)}</td>
+                <td className="num text-right">{formatCurrency(r.avgBuyPrice, currency)}</td>
+                <td className="num text-right">{formatCurrency(r.currentPrice, currency)}</td>
+                <td className="num text-right">{formatCurrency(r.currentValue, currency)}</td>
+                <td className={`num text-right ${r.unrealized >= 0 ? 'text-gain' : 'text-loss'}`}>
+                  {formatCurrency(r.unrealized, currency)}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
     </div>
   )
 }
-

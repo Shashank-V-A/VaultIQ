@@ -18,6 +18,8 @@ coverage/
 # Env files
 .env
 .env.*
+!.env.example
+!server/.env.example
 
 # Logs
 npm-debug.log*

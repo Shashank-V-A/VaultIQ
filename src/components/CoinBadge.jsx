@@ -19,13 +19,12 @@ export default function CoinBadge({ symbol, size = 18 }) {
       ) : (
         <span
           style={{ width: size, height: size }}
-          className="inline-flex items-center justify-center rounded-sm bg-neutral-200 text-[10px] font-semibold text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200"
+          className="inline-flex items-center justify-center bg-mist text-[10px] font-semibold text-ink"
         >
           {s.slice(0, 2)}
         </span>
       )}
-      <span className="tabular-nums">{s}</span>
+      <span className="font-medium tabular-nums">{s}</span>
     </span>
   )
 }
-

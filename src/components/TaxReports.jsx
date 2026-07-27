@@ -1,131 +1,73 @@
 import { formatCurrency } from '../utils/format.js'
 import { getTaxSummaryByFinancialYear } from '../utils/taxCalculator.js'
 
-export default function TaxReports({ transactions, perSymbol, currency }) {
-  const taxSummaries = getTaxSummaryByFinancialYear(transactions, perSymbol)
+export default function TaxReports({ transactions, perSymbol, currency, surchargeRate = 0 }) {
+  const taxSummaries = getTaxSummaryByFinancialYear(transactions, perSymbol, { surchargeRate })
 
   if (taxSummaries.length === 0) {
     return (
-      <div className="card">
-        <div className="text-center text-gray-500 py-8">No transactions found for tax calculation</div>
+      <div className="panel py-12 text-center text-sm text-slate-soft">
+        No transactions yet — add trades or sync CoinDCX to generate FY tax reports.
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      <div className="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-        <div className="mb-2 text-sm font-semibold text-blue-800 dark:text-blue-200">Important Tax Information</div>
-        <ul className="text-xs text-gray-700 dark:text-gray-300 space-y-1 list-disc list-inside">
-          <li>As per Union Budget 2022, all crypto gains are taxed at flat 30% rate + 4% Health & Education Cess</li>
-          <li>1% TDS is applicable on transfers above ₹50,000</li>
-          <li>TDS can be adjusted against final tax liability (including cess)</li>
-          <li>GST on trading fees is separate and not deductible from income tax</li>
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-soft">Compliance</div>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">Tax reports</h1>
+      </div>
+
+      <div className="panel border-signal/20 bg-signal/5">
+        <div className="mb-2 text-sm font-semibold text-signal-deep">Current Indian VDA rules</div>
+        <ul className="space-y-1.5 text-sm text-ink/80">
+          <li>Flat <strong>30%</strong> on income from transfer of VDAs (Income-tax Act 2025 / erstwhile §115BBH), plus surcharge (if applicable) and <strong>4%</strong> cess.</li>
+          <li><strong>Losses cannot be set off</strong> against other VDA gains or any other income, and cannot be carried forward.</li>
+          <li>Only <strong>cost of acquisition</strong> is deductible — exchange fees are not.</li>
+          <li><strong>1% TDS</strong> on specified transfers (thresholds ₹50,000 / ₹10,000 by person type). Credit against final liability.</li>
+          <li>Budget 2025/2026 kept the rate structure; reporting obligations for crypto-asset service providers were tightened.</li>
         </ul>
       </div>
 
-      <div className="card">
-        <div className="mb-4 text-sm font-semibold">Tax Summary by Financial Year</div>
-        <div className="overflow-x-auto">
-          <table className="table min-w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 text-left dark:border-gray-800">
-                <th className="px-2 py-2">Financial Year</th>
-                <th className="num px-2 py-2">Realized Profit</th>
-                <th className="num px-2 py-2">Tax @ 30%</th>
-                <th className="num px-2 py-2">Cess @ 4%</th>
-                <th className="num px-2 py-2">Total Tax</th>
-                <th className="num px-2 py-2">TDS Deducted</th>
-                <th className="num px-2 py-2">Net Tax Payable</th>
-                <th className="num px-2 py-2">GST on Fees</th>
+      <div className="panel overflow-x-auto">
+        <div className="mb-4 text-sm font-semibold">By financial year (Apr–Mar)</div>
+        <table className="table min-w-[960px] w-full">
+          <thead>
+            <tr>
+              <th>FY</th>
+              <th className="num text-right">Taxable gains</th>
+              <th className="num text-right">Disregarded losses</th>
+              <th className="num text-right">Tax 30%</th>
+              <th className="num text-right">Surcharge</th>
+              <th className="num text-right">Cess 4%</th>
+              <th className="num text-right">TDS</th>
+              <th className="num text-right">Net tax</th>
+              <th className="num text-right">GST on fees</th>
+            </tr>
+          </thead>
+          <tbody>
+            {taxSummaries.map((s) => (
+              <tr key={s.financialYear}>
+                <td className="font-medium">{s.financialYear}</td>
+                <td className="num text-right">{formatCurrency(s.taxableGains, currency)}</td>
+                <td className="num text-right text-slate-soft">{formatCurrency(s.disregardedLosses, currency)}</td>
+                <td className="num text-right text-loss">{formatCurrency(s.incomeTax30Percent, currency)}</td>
+                <td className="num text-right text-loss">{formatCurrency(s.surcharge || 0, currency)}</td>
+                <td className="num text-right text-loss">{formatCurrency(s.cess4Percent || 0, currency)}</td>
+                <td className="num text-right text-warn">{formatCurrency(s.tdsDeducted, currency)}</td>
+                <td className="num text-right font-semibold text-loss">{formatCurrency(s.netTaxLiability, currency)}</td>
+                <td className="num text-right">{formatCurrency(s.gstOnFees, currency)}</td>
               </tr>
-            </thead>
-            <tbody>
-              {taxSummaries.map((summary) => (
-                <tr key={summary.financialYear} className="border-b border-gray-100 dark:border-gray-800">
-                  <td className="px-2 py-2 font-medium">{summary.financialYear}</td>
-                  <td className="num px-2 py-2">{formatCurrency(summary.totalRealizedProfit, currency)}</td>
-                  <td className="num px-2 py-2 text-red-600 dark:text-red-400">
-                    {formatCurrency(summary.incomeTax30Percent, currency)}
-                  </td>
-                  <td className="num px-2 py-2 text-red-600 dark:text-red-400">
-                    {formatCurrency(summary.cess4Percent || 0, currency)}
-                  </td>
-                  <td className="num px-2 py-2 text-red-600 dark:text-red-400 font-semibold">
-                    {formatCurrency(summary.totalTaxWithCess || (summary.incomeTax30Percent + (summary.incomeTax30Percent * 0.04)), currency)}
-                  </td>
-                  <td className="num px-2 py-2 text-yellow-600 dark:text-yellow-400">
-                    {formatCurrency(summary.tdsDeducted, currency)}
-                  </td>
-                  <td className="num px-2 py-2 font-semibold text-red-600 dark:text-red-400">
-                    {formatCurrency(summary.netTaxLiability, currency)}
-                  </td>
-                  <td className="num px-2 py-2">{formatCurrency(summary.gstOnFees, currency)}</td>
-                </tr>
-              ))}
-              <tr className="border-t-2 border-gray-300 dark:border-gray-700 font-semibold">
-                <td className="px-2 py-2">Total</td>
-                <td className="num px-2 py-2">
-                  {formatCurrency(
-                    taxSummaries.reduce((sum, s) => sum + s.totalRealizedProfit, 0),
-                    currency
-                  )}
-                </td>
-                <td className="num px-2 py-2 text-red-600 dark:text-red-400">
-                  {formatCurrency(
-                    taxSummaries.reduce((sum, s) => sum + s.incomeTax30Percent, 0),
-                    currency
-                  )}
-                </td>
-                <td className="num px-2 py-2 text-red-600 dark:text-red-400">
-                  {formatCurrency(
-                    taxSummaries.reduce((sum, s) => sum + (s.cess4Percent || 0), 0),
-                    currency
-                  )}
-                </td>
-                <td className="num px-2 py-2 text-red-600 dark:text-red-400">
-                  {formatCurrency(
-                    taxSummaries.reduce((sum, s) => sum + (s.totalTaxWithCess || (s.incomeTax30Percent + (s.incomeTax30Percent * 0.04))), 0),
-                    currency
-                  )}
-                </td>
-                <td className="num px-2 py-2 text-yellow-600 dark:text-yellow-400">
-                  {formatCurrency(
-                    taxSummaries.reduce((sum, s) => sum + s.tdsDeducted, 0),
-                    currency
-                  )}
-                </td>
-                <td className="num px-2 py-2 text-red-600 dark:text-red-400">
-                  {formatCurrency(
-                    taxSummaries.reduce((sum, s) => sum + s.netTaxLiability, 0),
-                    currency
-                  )}
-                </td>
-                <td className="num px-2 py-2">
-                  {formatCurrency(
-                    taxSummaries.reduce((sum, s) => sum + s.gstOnFees, 0),
-                    currency
-                  )}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      <div className="card bg-gray-50 dark:bg-gray-900/50">
-        <div className="text-xs text-gray-600 dark:text-gray-400">
-          <p className="font-semibold mb-2">For ITR Filing:</p>
-          <ul className="space-y-1 list-disc list-inside">
-            <li>Report crypto gains under "Income from Other Sources" or "Capital Gains"</li>
-            <li>Taxable income: Realized Profit (after deducting cost basis)</li>
-            <li>Tax rate: 30% flat + 4% Health & Education Cess (no deductions/exemptions)</li>
-            <li>Include TDS deducted in Form 26AS</li>
-            <li>GST on fees is separate and not included in income tax calculation</li>
-          </ul>
-        </div>
+      <div className="panel-tight text-xs leading-relaxed text-slate-soft">
+        <p className="mb-2 font-semibold text-ink">ITR notes</p>
+        Report VDA transfers in Schedule VDA. Tax base shown here is the sum of positive FIFO gains only — matching the statutory no-set-off rule. Confirm TDS in Form 26AS / AIS. This tool is guidance, not tax advice.
       </div>
     </div>
   )
 }
-
