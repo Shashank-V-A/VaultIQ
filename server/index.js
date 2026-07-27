@@ -2,6 +2,8 @@ import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { initDatabase } from './db.js'
 import authRoutes from './routes/auth.js'
 import transactionRoutes from './routes/transactions.js'
@@ -9,7 +11,8 @@ import priceRoutes from './routes/prices.js'
 import settingsRoutes from './routes/settings.js'
 import coindcxRoutes from './routes/coindcx.js'
 
-dotenv.config()
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+dotenv.config({ path: path.join(__dirname, '.env') })
 
 const app = express()
 const PORT = process.env.PORT || 3001

@@ -1,7 +1,10 @@
 services:
+  # Optional — only if you prefer Docker. Native Postgres is fine too.
+  # Same credentials as server/.env: postgres/postgres, db vaultiq, port 5432.
   db:
     image: postgres:16-alpine
     container_name: vaultiq-pg
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -10,6 +13,12 @@ services:
       - "5432:5432"
     volumes:
       - vaultiq_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vaultiq"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   vaultiq_pg:
